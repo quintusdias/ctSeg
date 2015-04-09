@@ -66,16 +66,17 @@ class MyForm(QtGui.QDialog):
         """
         Setup paths to be able to run C3D.
         """
-        # Construct the full path to the c3d executable.
-        if socket.gethostname() == 'nciphub':
-            c3d_root = '/apps/share64/debian7/convert3d/nightly'
-
-        else:
-            # MGH setup.
-            c3d_root = '/space/getafix/1/users/jevans/c3d-1.0.0-Linux-x86_64/bin'
+        # Add some common paths to the c3d executable
+        # First is on HubZero, 2nd is Mac with gui installation, 3rd is 
+        # MGH getafix.
+        paths = ['/apps/share64/debian7/convert3d/nightly',
+                 '/Applications/Convert3DGUI.app/Contents/bin',
+                 '/space/getafix/1/users/jevans/c3d-1.0.0-Linux-x86_64/bin']
 
         env = dict(os.environ)
-        env['PATH'] = os.environ['PATH'] + ':' + c3d_root
+        env['PATH'] = os.environ['PATH']
+        for path in paths:
+            env['PATH'] = env['PATH'] + ':' + path
         self.env = env
 
     def run_c3d(self):
@@ -112,8 +113,8 @@ class MyForm(QtGui.QDialog):
         # What run images were chosen?
         idx1 = self.ui.team1ComboBox.currentIndex()
         idx2 = self.ui.team2ComboBox.currentIndex()
-        print(idx1)
-        print(idx2)
+        print("idx1 = ", idx1)
+        print("idx2 = ", idx2)
 
         qvar = self.ui.team1ComboBox.itemData(idx1, role=QtCore.Qt.UserRole)
         challenge_id1 = int(qvar.toString())
@@ -122,28 +123,34 @@ class MyForm(QtGui.QDialog):
 
         conn = sqlite3.connect('moist_challenge.db')
         c = conn.cursor()
-        sql = """SELECT file FROM challenge
-                 WHERE id = {0}"""
-        sql = sql.format(challenge_id1)
-        print(sql)
-        c.execute(sql)
+        sql = """
+              SELECT file FROM challenge
+              WHERE id = ? 
+              """
+        c.execute(sql, (challenge_id1,))
+        print(sql, challenge_id1)
+
         row = c.fetchone()
         file1 = row[0]
 
 
-        sql = """SELECT file FROM challenge
-                 WHERE id = {0}"""
-        sql = sql.format(challenge_id2)
-        print(sql)
-        c.execute(sql)
+        sql = """
+              SELECT file FROM challenge
+              WHERE id = ?
+              """
+        c.execute(sql, (challenge_id2,))
+        print(sql, challenge_id2)
+
         row = c.fetchone()
         file2 = row[0]
-        print(file1)
-        print(file2)
-        self.image_1 = file1
-        self.image_2 = file2
-        self.image1_data = nib.load(file1).get_data()
-        self.image2_data = nib.load(file2).get_data()
+        print("file1 = ", file1)
+        print("file2 = ", file2)
+        self.image_1 = os.path.join('/data/mgh/resultsNii', file1)
+        self.image_2 = os.path.join('/data/mgh/resultsNii', file2)
+        print("loading {}".format(self.image_1))
+        self.image1_data = nib.load(self.image_1).get_data()
+        print("loading {}".format(self.image_2))
+        self.image2_data = nib.load(self.image_2).get_data()
         flt = self.run_c3d()
 
         self.setupBaseImage()
@@ -200,13 +207,14 @@ class MyForm(QtGui.QDialog):
     def setupBaseImage(self):
         """
         """
-        sql = """SELECT file FROM base_image
-                 WHERE label = \"{0}\""""
-        sql = sql.format(self.label)
-        self.cursor.execute(sql)
+        sql = """
+              SELECT file FROM base_image
+              WHERE label = ?
+              """
+        self.cursor.execute(sql, (str(self.label),))
         row = self.cursor.fetchone()
         filepath = row[0]
-        img = nib.load(filepath)
+        img = nib.load(os.path.join('/data/mgh/resultsNii', filepath))
         self.image_data = img.get_data()
 
         height, width, depth = self.image_data.shape
@@ -235,29 +243,28 @@ class MyForm(QtGui.QDialog):
         c = conn.cursor()
 
         # setup the top level items.  These are just the collection names.
-        c.execute('SELECT name from collection')
+        sql = """
+              SELECT id, name from collection
+              """
+        c.execute(sql)
         rows = c.fetchall()
-        for row in rows:
-            collection = row[0]
-            branch = QtGui.QTreeWidgetItem(self.ui.collectionTreeWidget)
-            branch.setText(0, collection)
+        for id, collection_name in rows:
 
-            # Create the base images for the collection.
-            sql = """SELECT base_image.id, base_image.file, base_image.label
-                     FROM base_image
-                     INNER JOIN collection
-                     ON base_image.collection_id = collection.id
-                     WHERE collection.name = '{0}'"""
-            sql = sql.format(collection)
+            branch = QtGui.QTreeWidgetItem(self.ui.collectionTreeWidget)
+            branch.setText(0, collection_name)
+
+            # Get the base images for the collection.
+            sql = """
+                  SELECT base_image.id, base_image.file, base_image.label
+                  FROM base_image
+                  INNER JOIN collection
+                      ON base_image.collection_id = collection.id
+                  WHERE collection.name = ?
+                  """
             print(sql)
-            c.execute(sql)
+            c.execute(sql, (collection_name,))
             base_image_rows = c.fetchall()
-            for base_image_row in base_image_rows:
-                base_image_id = base_image_row[0]
-                label = base_image_row[2]
-                full_path = base_image_row[1]
-                _, tail = os.path.split(full_path)
-                base_image, _ = os.path.splitext(tail)
+            for base_image_id, base_image_relpath, label in base_image_rows:
                 leaf = QtGui.QTreeWidgetItem(branch)
                 leaf.setText(1, label)
                 leaf.setData(1, QtCore.Qt.UserRole, QtCore.QVariant(label))
@@ -276,23 +283,25 @@ class MyForm(QtGui.QDialog):
         label = leaf.data(column, QtCore.Qt.UserRole).toString()
         print("Base image id = {0}".format(label))
         self.label = label
+        print(type(label))
 
         # Get the runs associated with the base image and populate the combo
         # boxes.
         conn = sqlite3.connect('moist_challenge.db')
         cursor = conn.cursor()
-        sql = """SELECT id, team, run_id, label FROM challenge
-                 WHERE label = \"{0}\""""
-        sql = sql.format(label)
-        print(sql)
-        cursor.execute(sql)
+        sql = """
+              SELECT c.id, t.team, c.run_id
+              FROM challenge c INNER JOIN team t on t.id = c.team_id
+              WHERE label = ?
+              """
+        cursor.execute(sql, (str(label),))
+        print(sql, label)
         rows = cursor.fetchall()
-        for row in rows:
-            name = "{0}-{1}".format(row[1], row[2])
-            self.ui.team1ComboBox.addItem(name,
-                                          userData=QtCore.QVariant(str(row[0])))
-            self.ui.team2ComboBox.addItem(name,
-                                          userData=QtCore.QVariant(str(row[0])))
+        for challenge_id, team, run_id in rows:
+            name = "{0}-{1}".format(team, run_id)
+            userData = QtCore.QVariant(str(challenge_id))
+            self.ui.team1ComboBox.addItem(name, userData=userData)
+            self.ui.team2ComboBox.addItem(name, userData=userData)
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
