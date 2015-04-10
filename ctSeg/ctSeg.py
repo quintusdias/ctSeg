@@ -1,5 +1,6 @@
 # -*- coding:  utf-8 -*-
 import os
+import pkg_resources as pkg
 import re
 import socket
 import sqlite3
@@ -64,7 +65,9 @@ class CtSegForm(QtGui.QDialog):
     def setup_database(self):
         """
         """
-        self.conn = sqlite3.connect('moist_challenge.db')
+        relfile = os.path.join('share', 'moist_challenge.db')
+        dbfile = pkg.resource_filename(__name__, relfile)
+        self.conn = sqlite3.connect(dbfile)
         self.cursor = self.conn.cursor()
 
     def setup_c3d_environment(self):
@@ -126,16 +129,14 @@ class CtSegForm(QtGui.QDialog):
         qvar = self.ui.team1ComboBox.itemData(idx2, role=QtCore.Qt.UserRole)
         challenge_id2 = int(qvar.toString())
 
-        conn = sqlite3.connect('moist_challenge.db')
-        c = conn.cursor()
         sql = """
               SELECT file FROM challenge
               WHERE id = ? 
               """
-        c.execute(sql, (challenge_id1,))
+        self.cursor.execute(sql, (challenge_id1,))
         print(sql, challenge_id1)
 
-        row = c.fetchone()
+        row = self.cursor.fetchone()
         file1 = row[0]
 
 
@@ -143,10 +144,10 @@ class CtSegForm(QtGui.QDialog):
               SELECT file FROM challenge
               WHERE id = ?
               """
-        c.execute(sql, (challenge_id2,))
+        self.cursor.execute(sql, (challenge_id2,))
         print(sql, challenge_id2)
 
-        row = c.fetchone()
+        row = self.cursor.fetchone()
         file2 = row[0]
         print("file1 = ", file1)
         print("file2 = ", file2)
@@ -244,15 +245,13 @@ class CtSegForm(QtGui.QDialog):
                                QtCore.SIGNAL('itemClicked(QTreeWidgetItem*, int)'),
                                self.treeItemClicked)
 
-        conn = sqlite3.connect('moist_challenge.db')
-        c = conn.cursor()
 
         # setup the top level items.  These are just the collection names.
         sql = """
               SELECT id, name from collection
               """
-        c.execute(sql)
-        rows = c.fetchall()
+        self.cursor.execute(sql)
+        rows = self.cursor.fetchall()
         for id, collection_name in rows:
 
             branch = QtGui.QTreeWidgetItem(self.ui.collectionTreeWidget)
@@ -267,8 +266,8 @@ class CtSegForm(QtGui.QDialog):
                   WHERE collection.name = ?
                   """
             print(sql)
-            c.execute(sql, (collection_name,))
-            base_image_rows = c.fetchall()
+            self.cursor.execute(sql, (collection_name,))
+            base_image_rows = self.cursor.fetchall()
             for base_image_id, base_image_relpath, label in base_image_rows:
                 leaf = QtGui.QTreeWidgetItem(branch)
                 leaf.setText(1, label)
@@ -292,16 +291,14 @@ class CtSegForm(QtGui.QDialog):
 
         # Get the runs associated with the base image and populate the combo
         # boxes.
-        conn = sqlite3.connect('moist_challenge.db')
-        cursor = conn.cursor()
         sql = """
               SELECT c.id, t.team, c.run_id
               FROM challenge c INNER JOIN team t on t.id = c.team_id
               WHERE label = ?
               """
-        cursor.execute(sql, (str(label),))
+        self.cursor.execute(sql, (str(label),))
         print(sql, label)
-        rows = cursor.fetchall()
+        rows = self.cursor.fetchall()
         for challenge_id, team, run_id in rows:
             name = "{0}-{1}".format(team, run_id)
             userData = QtCore.QVariant(str(challenge_id))
