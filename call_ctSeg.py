@@ -27,6 +27,11 @@ class MyForm(QtGui.QDialog):
     def __init__(self, parent=None):
         """
         """
+        if socket.gethostname() == 'nciphub':
+            self.dataroot = '/data/groups/qinportal/ctSeg/resultsNii'
+        else:
+            self.dataroot = '/data/mgh/resultsNii'
+
         QtGui.QWidget.__init__(self, parent)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
@@ -145,8 +150,8 @@ class MyForm(QtGui.QDialog):
         file2 = row[0]
         print("file1 = ", file1)
         print("file2 = ", file2)
-        self.image_1 = os.path.join('/data/mgh/resultsNii', file1)
-        self.image_2 = os.path.join('/data/mgh/resultsNii', file2)
+        self.image_1 = os.path.join(self.dataroot, file1)
+        self.image_2 = os.path.join(self.dataroot, file2)
         print("loading {}".format(self.image_1))
         self.image1_data = nib.load(self.image_1).get_data()
         print("loading {}".format(self.image_2))
@@ -214,7 +219,7 @@ class MyForm(QtGui.QDialog):
         self.cursor.execute(sql, (str(self.label),))
         row = self.cursor.fetchone()
         filepath = row[0]
-        img = nib.load(os.path.join('/data/mgh/resultsNii', filepath))
+        img = nib.load(os.path.join(self.dataroot, filepath))
         self.image_data = img.get_data()
 
         height, width, depth = self.image_data.shape
