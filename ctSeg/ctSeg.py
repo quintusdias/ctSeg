@@ -13,9 +13,9 @@ import nibabel as nib
 import skimage.measure
 import scipy.misc
 
-from ctSeg import Ui_Dialog
+from .ctSeg_ui import Ui_Dialog
 
-class MyForm(QtGui.QDialog):
+class CtSegForm(QtGui.QDialog):
     """
     Attributes
     ----------
@@ -307,9 +307,3 @@ class MyForm(QtGui.QDialog):
             userData = QtCore.QVariant(str(challenge_id))
             self.ui.team1ComboBox.addItem(name, userData=userData)
             self.ui.team2ComboBox.addItem(name, userData=userData)
-
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    myapp = MyForm()
-    myapp.show()
-    sys.exit(app.exec_())

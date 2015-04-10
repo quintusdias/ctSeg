@@ -1,7 +1,13 @@
 import argparse
 import glob
 import os
+import pkg_resources as pkg
 import sqlite3
+import sys
+
+from PyQt4 import QtCore, QtGui
+
+from .ctSeg import CtSegForm
 
 class CtSegDB(object):
     def __init__(self, root):
@@ -11,7 +17,9 @@ class CtSegDB(object):
         root : str
             Root directory where Nifty files are expected to be found.
         """
-        self.conn = sqlite3.connect('moist_challenge.db')
+        relfile = os.path.join('share', 'moist_challenge.db')
+        dbfile = pkg_resources.resource_filename(__name__, relfile)
+        self.conn = sqlite3.connect(dbfile)
         self.cursor = self.conn.cursor()
         self.root = root
 
@@ -180,8 +188,20 @@ class CtSegDB(object):
 
         self.conn.commit()
         
-if __name__ == '__main__':
-    
+
+def run_ctseg():
+    """
+    Entry point for running the NCIPHUB application
+    """
+    app = QtGui.QApplication(sys.argv)
+    myapp = CtSegForm()
+    myapp.show()
+    sys.exit(app.exec_())
+
+def make_db():
+    """
+    Entry point for creating the SQLITE3 database.
+    """
     description='Create moist challenge database'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('root', help='Data root')
@@ -189,3 +209,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     o = CtSegDB(args.root)
     o.run()
+
