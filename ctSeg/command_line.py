@@ -9,17 +9,18 @@ from PyQt4 import QtCore, QtGui
 
 from .ctSeg import CtSegForm
 
+
 class CtSegDB(object):
-    def __init__(self, root):
+    def __init__(self, root, dbase):
         """
         Parameters
         ----------
         root : str
             Root directory where Nifty files are expected to be found.
+        dbase : str
+            Path to output SQLITE3 database file.
         """
-        relfile = os.path.join('share', 'moist_challenge.db')
-        dbfile = pkg_resources.resource_filename(__name__, relfile)
-        self.conn = sqlite3.connect(dbfile)
+        self.conn = sqlite3.connect(dbase)
         self.cursor = self.conn.cursor()
         self.root = root
 
@@ -52,7 +53,7 @@ class CtSegDB(object):
         self.cursor.execute("INSERT INTO team VALUES (NULL, 'cumc')")
         self.cursor.execute("INSERT INTO team VALUES (NULL, 'moffitt')")
         self.cursor.execute("INSERT INTO team VALUES (NULL, 'stanford')")
-        
+
         self.conn.commit()
 
     def create_challenge_table(self):
@@ -77,7 +78,6 @@ class CtSegDB(object):
               """
         self.cursor.execute(sql)
         self.conn.commit()
-        
 
     def create_base_image_table(self):
         sql = """
@@ -95,7 +95,7 @@ class CtSegDB(object):
               )
               """
         self.cursor.execute(sql)
-        
+
     def populate(self):
         collection_dirs = glob.glob(os.path.join(self.root, '*'))
 
@@ -115,7 +115,7 @@ class CtSegDB(object):
 
             # Two items in the next directory level.  There may be nifty files,
             # soft-links, or directories.  The names of the directories are the
-            # labels.  Corresponding to each label should be a nifty file 
+            # labels.  Corresponding to each label should be a nifty file
             # with the same name.  This may be a soft link or an actual file.
             items = glob.glob(os.path.join(self.root, collection, '*'))
             labels = [os.path.basename(item) for item in items if
@@ -150,6 +150,11 @@ class CtSegDB(object):
 
                     for item in lst:
 
+                        # If it is zero-size, then ignore it.
+                        if os.path.getsize(item) == 0:
+                            print('Zero-size file, ignoring {}'.format(item))
+                            continue
+
                         # Get the run ID.  This is brittle, should be
                         # replaced.
                         run_id = int(item[-8])
@@ -161,8 +166,7 @@ class CtSegDB(object):
                                """
                         self.cursor.execute(sql4, (base_image_id, team_id,
                                                    collection_id, label,
-                                                   run_id, relfile)) 
-
+                                                   run_id, relfile))
 
         self.conn.commit()
 
@@ -171,7 +175,7 @@ class CtSegDB(object):
               DROP TABLE IF EXISTS collection
               """
         self.cursor.execute(sql)
-        
+
         sql = """
               CREATE TABLE collection (
                   id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +183,7 @@ class CtSegDB(object):
               )
               """
         self.cursor.execute(sql)
-        
+
         self.cursor.execute("INSERT INTO collection VALUES (NULL, 'cumc')")
         self.cursor.execute("INSERT INTO collection VALUES (NULL, 'lidc')")
         self.cursor.execute("INSERT INTO collection VALUES (NULL, 'moffitt')")
@@ -187,7 +191,7 @@ class CtSegDB(object):
         self.cursor.execute("INSERT INTO collection VALUES (NULL, 'stanford')")
 
         self.conn.commit()
-        
+
 
 def run_ctseg():
     """
@@ -198,15 +202,20 @@ def run_ctseg():
     myapp.show()
     sys.exit(app.exec_())
 
+
 def make_db():
     """
     Entry point for creating the SQLITE3 database.
     """
-    description='Create moist challenge database'
+    description = 'Create moist challenge database'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('root', help='Data root')
+
+    msg = 'Data root of base images and pairwise segmentations'
+    parser.add_argument('root', help=msg)
+
+    msg = 'Output database'
+    parser.add_argument('database', help=msg)
 
     args = parser.parse_args()
-    o = CtSegDB(args.root)
+    o = CtSegDB(args.root, args.database)
     o.run()
-
