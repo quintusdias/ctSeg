@@ -112,7 +112,7 @@ class CtSegForm(QtGui.QDialog):
         self.c3d_output = command
         self.c3d_output += '\n'
         output = subprocess.check_output(command.split(' '), env=self.env)
-        matchobj = regex.search(output)
+        matchobj = regex.search(output.decode('utf-8'))
         logging.info(output)
         self.ui.diceLabel.setText(matchobj.group())
         return float(matchobj.group('dice'))
@@ -124,19 +124,30 @@ class CtSegForm(QtGui.QDialog):
         # What pairwise images were chosen?
         idx1 = self.ui.team1ComboBox.currentIndex()
         idx2 = self.ui.team2ComboBox.currentIndex()
+        msg = "QT indices {} and {} chosen".format(idx1, idx2)
+        logging.info(msg)
 
         qvar = self.ui.team1ComboBox.itemData(idx1, role=QtCore.Qt.UserRole)
-        challenge_id1 = int(qvar.toString())
+        challenge_id1 = qvar
         qvar = self.ui.team1ComboBox.itemData(idx2, role=QtCore.Qt.UserRole)
-        challenge_id2 = int(qvar.toString())
+        challenge_id2 = qvar
+
+        if sys.hexversion < 0x03000000:
+            challenge_id1 = challenge_id1.toString()
+            challenge_id2 = challenge_id2.toString()
+
+        msg = "Pairwise images {} and {} chosen"
+        msg = msg.format(challenge_id1, challenge_id2)
+        logging.info(msg)
 
         sql = """
               SELECT file FROM challenge
               WHERE id = :id
               """
-        self.cursor.execute(sql, {'id': challenge_id1})
         logging.info(sql)
+        logging.info(type(challenge_id1))
         logging.info(str(challenge_id1))
+        self.cursor.execute(sql, {'id': challenge_id1})
 
         row = self.cursor.fetchone()
         file1 = row[0]
@@ -275,7 +286,8 @@ class CtSegForm(QtGui.QDialog):
             for base_image_id, base_image_relpath, label in base_image_rows:
                 leaf = QtGui.QTreeWidgetItem(branch)
                 leaf.setText(1, label)
-                leaf.setData(1, QtCore.Qt.UserRole, QtCore.QVariant(label))
+                # leaf.setData(1, QtCore.Qt.UserRole, QtCore.QVariant(label))
+                leaf.setData(1, QtCore.Qt.UserRole, label)
 
             branch.setExpanded(False)
 
@@ -288,7 +300,9 @@ class CtSegForm(QtGui.QDialog):
         self.ui.team1ComboBox.clear()
         self.ui.team2ComboBox.clear()
 
-        label = leaf.data(column, QtCore.Qt.UserRole).toString()
+        label = leaf.data(column, QtCore.Qt.UserRole)
+        if sys.hexversion < 0x03000000:
+            label = label.toString()
         logging.info("Base image id = {0}".format(label))
         self.label = label
 
@@ -305,6 +319,5 @@ class CtSegForm(QtGui.QDialog):
         rows = self.cursor.fetchall()
         for challenge_id, team, run_id in rows:
             name = "{0}-{1}".format(team, run_id)
-            userData = QtCore.QVariant(str(challenge_id))
-            self.ui.team1ComboBox.addItem(name, userData=userData)
-            self.ui.team2ComboBox.addItem(name, userData=userData)
+            self.ui.team1ComboBox.addItem(name, userData=str(challenge_id))
+            self.ui.team2ComboBox.addItem(name, userData=str(challenge_id))
