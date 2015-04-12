@@ -2,7 +2,7 @@ from setuptools import setup
 
 kwargs = {'name': 'ctSeg',
           'description': 'NCIPHUB Tool for MOIST run segmentation comparison',
-          'version': '0.0.3',
+          'version': '0.0.4',
           'long_description': open('README.md').read(),
           'author': 'John Evans',
           'author_email': 'john.g.evans.ne@gmail.com',
