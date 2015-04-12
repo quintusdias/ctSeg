@@ -2,9 +2,12 @@ import argparse
 import glob
 import os
 import pkg_resources as pkg
+import shlex
 import sqlite3
+import subprocess
 import sys
 
+import nibabel as nib
 from PyQt4 import QtCore, QtGui
 
 from .ctSeg import CtSegForm
@@ -150,11 +153,15 @@ class CtSegDB(object):
 
                     for item in lst:
 
-                        # If it is zero-size, then ignore it.
-                        if os.path.getsize(item) == 0:
-                            print('Zero-size file, ignoring {}'.format(item))
+                        try:
+                            img = nib.load(item)
+                        except:
+                            # If nibabel cannot open the item, it must not be
+                            # a NIFTI, so skip it.
+                            print('Could not load {}'.format(item))
                             continue
 
+                        print('Successfully loaded {}'.format(item))
                         # Get the run ID.  This is brittle, should be
                         # replaced.
                         run_id = int(item[-8])
