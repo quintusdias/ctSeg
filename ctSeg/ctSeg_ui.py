@@ -77,4 +77,3 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
         self.executeButton.setText(_translate("Dialog", "Execute!", None))
         self.diceLabel.setText(_translate("Dialog", "TextLabel", None))
-
