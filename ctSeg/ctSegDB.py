@@ -42,14 +42,15 @@ class CtSegDB(object):
         sql = """
               CREATE TABLE team (
                   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                  team          VARCHAR(30)
+                  longname      VARCHAR(30),
+                  shortname     VARCHAR(30)
               )
               """
         self.cursor.execute(sql)
 
-        self.cursor.execute("INSERT INTO team VALUES (NULL, 'cumc')")
-        self.cursor.execute("INSERT INTO team VALUES (NULL, 'moffitt')")
-        self.cursor.execute("INSERT INTO team VALUES (NULL, 'stanford')")
+        self.cursor.execute("INSERT INTO team VALUES (NULL, 'Columbia', 'cumc')")
+        self.cursor.execute("INSERT INTO team VALUES (NULL, 'Moffitt', 'moffitt')")
+        self.cursor.execute("INSERT INTO team VALUES (NULL, 'Stanford', 'stanford')")
 
         self.conn.commit()
 
@@ -99,7 +100,7 @@ class CtSegDB(object):
         # Verify that the directory names are valid.
         sql1 = """
                SELECT id FROM collection
-               WHERE name = ?
+               WHERE shortname = ?
                """
         for collection in [os.path.basename(d) for d in collection_dirs]:
             self.cursor.execute(sql1, (collection,))
@@ -139,8 +140,8 @@ class CtSegDB(object):
                 self.cursor.execute(sql3, (relfile,))
                 base_image_id = self.cursor.fetchone()[0]
 
-                self.cursor.execute('SELECT * from team ORDER BY id')
-                for team_id, team in self.cursor.fetchall():
+                self.cursor.execute('SELECT id, shortname, longname from team ORDER BY id')
+                for team_id, shortname, longname in self.cursor.fetchall():
                     path = os.path.join(self.root, collection, label,
                                         'alg{:02}_run*.nii.gz'.format(team_id))
                     lst = glob.glob(path)
@@ -179,16 +180,17 @@ class CtSegDB(object):
 
         sql = """
               CREATE TABLE collection (
-                  id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                  name VARCHAR(30)
+                  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                  longname  VARCHAR(30),
+                  shortname VARCHAR(30)
               )
               """
         self.cursor.execute(sql)
 
-        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'cumc')")
-        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'lidc')")
-        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'moffitt')")
-        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'rider')")
-        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'stanford')")
+        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'Columbia', 'cumc')")
+        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'LIDC', 'lidc')")
+        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'Moffitt', 'moffitt')")
+        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'Rider', 'rider')")
+        self.cursor.execute("INSERT INTO collection VALUES (NULL, 'Stanford', 'stanford')")
 
         self.conn.commit()

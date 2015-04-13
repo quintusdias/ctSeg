@@ -263,7 +263,7 @@ class CtSegForm(QtGui.QDialog):
 
         # setup the top level items.  These are just the collection names.
         sql = """
-              SELECT id, name from collection
+              SELECT id, longname from collection
               """
         self.cursor.execute(sql)
         rows = self.cursor.fetchall()
@@ -278,7 +278,7 @@ class CtSegForm(QtGui.QDialog):
                   FROM base_image
                   INNER JOIN collection
                       ON base_image.collection_id = collection.id
-                  WHERE collection.name = :collection_name
+                  WHERE collection.longname = :collection_name
                   """
             logging.info(sql)
             self.cursor.execute(sql, {'collection_name': collection_name})
@@ -309,7 +309,7 @@ class CtSegForm(QtGui.QDialog):
         # Get the runs associated with the base image and populate the combo
         # boxes.
         sql = """
-              SELECT c.id, t.team, c.run_id
+              SELECT c.id, t.shortname, t.longname, c.run_id
               FROM challenge c INNER JOIN team t on t.id = c.team_id
               WHERE label = :label
               """
@@ -317,7 +317,7 @@ class CtSegForm(QtGui.QDialog):
         logging.info("label:  {}".format(label))
         self.cursor.execute(sql, {'label': str(label)})
         rows = self.cursor.fetchall()
-        for challenge_id, team, run_id in rows:
-            name = "{0}-{1}".format(team, run_id)
+        for challenge_id, shortname, longname, run_id in rows:
+            name = "{0}-{1}".format(longname, run_id)
             self.ui.team1ComboBox.addItem(name, userData=str(challenge_id))
             self.ui.team2ComboBox.addItem(name, userData=str(challenge_id))
