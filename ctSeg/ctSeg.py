@@ -321,3 +321,5 @@ class CtSegForm(QtGui.QDialog):
             name = "{0}-{1}".format(longname, run_id)
             self.ui.team1ComboBox.addItem(name, userData=str(challenge_id))
             self.ui.team2ComboBox.addItem(name, userData=str(challenge_id))
+
+        self.ui.executeButton.setText("Run C3D")
