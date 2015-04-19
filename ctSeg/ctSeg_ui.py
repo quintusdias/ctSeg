@@ -31,6 +31,11 @@ class Ui_Dialog(object):
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.selectionLayout.addItem(spacerItem)
 
+        label = QtGui.QLabel(self.selectionWidget)
+        label.setText('Pairwise Segmentations')
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        self.selectionLayout.addWidget(label)
+
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.team1ComboBox = QtGui.QComboBox(self.selectionWidget)
@@ -63,6 +68,7 @@ class Ui_Dialog(object):
 
         self.diceLabel = QtGui.QLabel(self.displayWidget)
         self.diceLabel.setObjectName("diceLabel")
+        self.diceLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.diceLabel.setText("")
         self.displayLayout.addWidget(self.diceLabel)
 
